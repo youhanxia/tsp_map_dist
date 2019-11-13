@@ -19,7 +19,9 @@ class Kernel_Dist(Abstract_Dist):
 
         model = getattr(kernels, kernel)()
 
-        dist = model.fit_transform([g_a, g_b])[0, 1]
+        model = model.fit(g_a)
+
+        dist = model.transform(g_b)
 
         return {'dist': dist}
 
