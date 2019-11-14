@@ -7,7 +7,7 @@ from deap import creator
 from deap import tools
 
 from utils import reorder
-from problems import Abstract_Prob, TSP
+from problem import Abstract_Prob, TSP
 from solver import Abstract_Solver
 
 

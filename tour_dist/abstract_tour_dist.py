@@ -1,4 +1,4 @@
-from problems import TSP
+from problem import TSP
 
 
 class Abstact_Tour_Dist(object):

@@ -1,6 +1,6 @@
 import numpy as np
 
-from problems import Abstract_Prob
+from problem import Abstract_Prob
 
 
 class Abstract_Solver(object):

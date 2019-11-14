@@ -7,7 +7,7 @@ import graphkernels.kernels as gk
 
 
 from dist import Abstract_Dist
-from problems import TSP
+from problem import TSP
 
 
 class Kernel_Dist(Abstract_Dist):
@@ -30,6 +30,7 @@ class Kernel_Dist(Abstract_Dist):
         g_a = self._construct_graph(inst_a)
         g_b = self._construct_graph(inst_b)
 
+        ker_sim = None
         if kernel == 'random_walk':
             ker_sim = gk.CalculateGeometricRandomWalkKernel([g_a, g_b])
         elif kernel == 'shortest_path':

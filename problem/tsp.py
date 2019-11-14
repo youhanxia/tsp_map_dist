@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
 
-from problems import Abstract_Prob
+from problem import Abstract_Prob
 
 
 class TSP(np.ndarray, Abstract_Prob):

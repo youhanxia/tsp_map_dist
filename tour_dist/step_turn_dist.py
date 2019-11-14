@@ -1,7 +1,7 @@
 import math
 import numpy as np
 
-from problems import TSP
+from problem import TSP
 from tour_dist import Abstact_Tour_Dist
 
 

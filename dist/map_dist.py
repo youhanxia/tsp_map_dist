@@ -1,11 +1,12 @@
 import numpy as np
 from scipy.stats import pearsonr, ttest_ind
+from scipy.linalg import norm
 from matplotlib import pyplot as plt
 
 from dist import Abstract_Dist
 from solver import GA_Solver
 
-from problems import Abstract_Prob, TSP
+from problem import Abstract_Prob, TSP
 
 
 class Map_Dist(Abstract_Dist):
@@ -41,20 +42,25 @@ class Map_Dist(Abstract_Dist):
         spl_b = splr.solve(inst_b, niching='fs')
         fit_a = np.array(list(map(lambda x: x.fitness.values[0], spl_a)))
         fit_b = np.array(list(map(lambda x: x.fitness.values[0], spl_b)))
+        avg_a = np.mean(fit_a)
         avg_b = np.mean(fit_b)
 
-        print(np.mean(fit_a))
-        print(np.std(fit_a))
-        print(np.mean(fit_b))
-        print(np.std(fit_b))
+        # print('fit_a mean', np.mean(fit_a))
+        # print('fit_a std', np.std(fit_a))
+        # print('fit_b mean', np.mean(fit_b))
+        # print('fit_b std', np.std(fit_b))
 
         # optimise pi
-        def meta_fit(pi):
+        def two_term_form(pi):
             fit_trans = np.array([inst_b.eval(pi[s])[0] for s in spl_a])
             return [-(self._alpha * pearsonr(fit_a, fit_trans)[0] + (1 - self._alpha) * (avg_b / np.mean(fit_trans)))]
 
+        def norm_form(pi):
+            fit_trans = np.array([inst_b.eval(pi[s])[0] for s in spl_a])
+            return [norm(fit_trans / avg_b - fit_a / avg_a) / self._sample_size]
+
         spl_slr = GA_Solver(pop_size=self._pop_size, max_iter=self._max_iter)
-        pop = spl_slr.solve(Abstract_Prob(inst_b.n), eval=meta_fit)
+        pop = spl_slr.solve(Abstract_Prob(inst_b.n), eval=norm_form)
         fit = [ind.fitness.values[0] for ind in pop]
         # print(np.std(fit))
         idx = np.argmin(fit)

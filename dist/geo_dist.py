@@ -5,7 +5,7 @@ from utils.transformations import rotation_matrix
 from utils.lin_assign import opt_assign
 
 from dist.abstract_dist import Abstract_Dist
-from problems import Abstract_Prob
+from problem import Abstract_Prob
 
 
 class Geo_Dist(Abstract_Dist):
