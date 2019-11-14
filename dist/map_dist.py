@@ -38,8 +38,10 @@ class Map_Dist(Abstract_Dist):
 
         # sample from solution space
         splr = GA_Solver(pop_size=self._sample_size, max_iter=self._sample_iter, radius=self._radius)
-        spl_a = splr.solve(inst_a, niching='fs')
-        spl_b = splr.solve(inst_b, niching='fs')
+        splr.solve(inst_a, niching='fs')
+        spl_a = splr.samples
+        splr.solve(inst_b, niching='fs')
+        spl_b = splr.samples
         fit_a = np.array(list(map(lambda x: x.fitness.values[0], spl_a)))
         fit_b = np.array(list(map(lambda x: x.fitness.values[0], spl_b)))
         avg_a = np.mean(fit_a)

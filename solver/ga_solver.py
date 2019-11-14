@@ -20,11 +20,24 @@ class GA_Solver(Abstract_Solver):
     _scaling = 1.0
     _alpha = 1
 
+    samples = []
+
+    timer = 0
+
     def _sharing(self):
         def decorator(func):
             def wrapper(*args, **kargs):
                 # calculate sharing factor for each individual
                 individuals = list(map(reorder, args[0]))
+
+                # take intermediate result as samples
+                self.timer += 1
+                if self.timer == 10:
+                    # idx = np.random.choice(len(args[0]), 10, replace=False)
+                    self.samples.extend(args[0][:10])
+                    self.timer = 0
+
+
                 pd = squareform(pdist(individuals)) / self._scaling
 
                 mask = pd < self._radius
@@ -53,6 +66,10 @@ class GA_Solver(Abstract_Solver):
             creator.create('Individual', np.ndarray, typecode='i', fitness=creator.FitnessMin)
 
     def solve(self, inst: Abstract_Prob, eval=None, niching=None):
+        # initialise samples for each solve
+        self.samples = []
+        self.timer = 0
+
         toolbox = base.Toolbox()
 
         # Attribute generator
