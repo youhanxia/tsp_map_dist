@@ -20,12 +20,13 @@ class Kernel_Dist(Abstract_Dist):
         g.vs['label'] = [0] * n
 
         for e, w in zip(edges, edge_weights):
-            print(e, w)
             g.add_edge(e[0], e[1], label=w)
 
         return g.as_undirected()
 
     def dist(self, inst_a: TSP, inst_b: TSP, kernel='shortest_path'):
+        # return kernel similarity directly
+        # not in the form of distances, i.e. not defined in [0, inf)
         g_a = self._construct_graph(inst_a)
         g_b = self._construct_graph(inst_b)
 
