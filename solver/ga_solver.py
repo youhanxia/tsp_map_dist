@@ -37,7 +37,6 @@ class GA_Solver(Abstract_Solver):
                     self.samples.extend(args[0][:10])
                     self.timer = 0
 
-
                 pd = squareform(pdist(individuals)) / self._scaling
 
                 mask = pd < self._radius
