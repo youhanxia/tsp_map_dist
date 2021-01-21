@@ -3,47 +3,78 @@ from scipy.stats import pearsonr, ttest_ind
 from scipy.linalg import norm
 from matplotlib import pyplot as plt
 
-from dist import Abstract_Dist
+from dist import Abstract_Dist, Geo_Dist
 from solver import GA_Solver
 
 from problem import Abstract_Prob, TSP
 
 
+def vec_amp(v, factor=5):
+    avg_v = np.mean(v)
+    diff = v - avg_v
+    # return diff * factor + avg_v
+    return diff
+    # return v
+
+
 class Map_Dist(Abstract_Dist):
+    lbl = 'mapping'
+
     # 1.0 for higher correlation 0.0 for better mean
-    _alpha = 1.0
-    _sample_size = 50
-    _sample_iter = 50
-    _pop_size = 300
+    _alpha = 0.5
+    _sample_size = 150
+    _sample_iter = 250
+    _pop_size = 50
     _max_iter = 50
     _radius = 0.1
+    _verbose = False
+    _obj = None
 
-    def __init__(self, sample_size=None, max_iter=None, radius=None):
+    def __init__(
+            self,
+            sample_size=None,
+            sample_iter=None,
+            pop_size=None,
+            max_iter=None,
+            radius=None,
+            obj='two_term',
+            verbose=False):
         super().__init__()
 
         if sample_size:
             self._sample_size = sample_size
+        if sample_iter:
+            self._sample_iter = sample_iter
+        if pop_size:
+            self._pop_size = pop_size
         if max_iter:
             self._max_iter = max_iter
         if radius:
             self._radius = radius
+        self._obj = obj
+        self._verbose = verbose
 
-        print('sample size', self._sample_size)
-        print('pi pop size', self._pop_size)
-        print('iteration', self._max_iter)
-        print('alpha', self._alpha)
-        print('radius', self._radius)
+        if verbose:
+            print('sample size', self._sample_size)
+            print('pi pop size', self._pop_size)
+            print('iteration', self._max_iter)
+            print('alpha', self._alpha)
+            print('radius', self._radius)
 
     def dist(self, inst_a: Abstract_Prob, inst_b: Abstract_Prob):
 
+        init_pi = Geo_Dist().dist(inst_a, inst_b)['pi']
+
         # sample from solution space
         splr = GA_Solver(pop_size=self._sample_size, max_iter=self._sample_iter, radius=self._radius)
-        splr.solve(inst_a, niching='fs')
-        spl_a = splr.samples
-        splr.solve(inst_b, niching='fs')
-        spl_b = splr.samples
-        fit_a = np.array(list(map(lambda x: x.fitness.values[0], spl_a)))
-        fit_b = np.array(list(map(lambda x: x.fitness.values[0], spl_b)))
+        spl_a = splr.solve(inst_a, niching='fs')['pop']
+        # spl_a = splr.samples
+        spl_b = splr.solve(inst_b, niching='fs')['pop']
+        # spl_b = splr.samples
+        # fit_a = np.array(list(map(lambda x: x.fitness.values[0], spl_a)))
+        # fit_b = np.array(list(map(lambda x: x.fitness.values[0], spl_b)))
+        fit_a = np.array([inst_a.eval(s)[0] for s in spl_a])
+        fit_b = np.array([inst_b.eval(s)[0] for s in spl_b])
         avg_a = np.mean(fit_a)
         avg_b = np.mean(fit_b)
 
@@ -55,22 +86,28 @@ class Map_Dist(Abstract_Dist):
         # optimise pi
         def two_term_form(pi):
             fit_trans = np.array([inst_b.eval(pi[s])[0] for s in spl_a])
-            return [-(self._alpha * pearsonr(fit_a, fit_trans)[0] + (1 - self._alpha) * (avg_b / np.mean(fit_trans)))]
+            return [-(self._alpha * pearsonr(vec_amp(fit_a), vec_amp(fit_trans))[0] + (1 - self._alpha) * (avg_b / np.mean(fit_trans)))]
+            # return [-(self._alpha * pearsonr(fit_a, fit_trans)[0] + (1 - self._alpha) * (avg_b / np.mean(fit_trans)))]
 
         def norm_form(pi):
             fit_trans = np.array([inst_b.eval(pi[s])[0] for s in spl_a])
             return [norm(fit_trans / avg_b - fit_a / avg_a) / self._sample_size]
 
+        # print('two term form', two_term_form(init_pi))
+        # print('norm form', norm_form(init_pi))
+
+        if self._obj == 'norm':
+            obj_func = norm_form
+        else:
+            obj_func = two_term_form
+
         spl_slr = GA_Solver(pop_size=self._pop_size, max_iter=self._max_iter)
-        pop = spl_slr.solve(Abstract_Prob(inst_b.n), eval=norm_form)
-        fit = [ind.fitness.values[0] for ind in pop]
-        # print(np.std(fit))
-        idx = np.argmin(fit)
+        res = spl_slr.solve(Abstract_Prob(inst_b.n), eval=obj_func, seed=init_pi)
 
-        return {'dist': fit[idx], 'pi': pop[idx]}
+        return {'dist': res['fitness'], 'pi': res['tour']}
 
 
-n = 50
+n = 10
 
 
 def main0():

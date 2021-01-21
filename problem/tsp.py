@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
+from scipy.stats import exponweib
 
 from problem import Abstract_Prob
 
@@ -13,7 +14,7 @@ class TSP(np.ndarray, Abstract_Prob):
 
     def __new__(cls, *args):
         obj = args[0]
-        if type(obj) is np.ndarray and obj.shape[1] == 2:
+        if type(obj) in [np.ndarray, TSP] and obj.shape[1] == 2:
             # initialise with coordinate array
             return np.asarray(obj).view(cls)
         elif type(obj) is int and obj > 2:
@@ -54,6 +55,13 @@ class TSP(np.ndarray, Abstract_Prob):
                 if self.dist_mat[a][c] + self.dist_mat[d][b] < self.dist_mat[a][b] + self.dist_mat[d][c]:
                     new_tour[i + 1: j + 1] = new_tour[i + 1: j + 1][:: -1]
         return new_tour
+
+    def hardness_est(self):
+        dists = np.array(self.dist_mat).flatten()
+        # normalise to r == 1
+        dists = dists / dists.max() * 2.0
+        _, shp, _, _ = exponweib.fit(dists, f0=1)
+        return np.abs(-0.509 * shp + 0.707)
 
 
 if __name__ == '__main__':

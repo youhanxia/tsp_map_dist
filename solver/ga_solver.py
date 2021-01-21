@@ -1,4 +1,6 @@
 import numpy as np
+import operator
+from collections.abc import Iterable
 from scipy.spatial.distance import pdist, squareform
 
 from deap import algorithms
@@ -20,9 +22,8 @@ class GA_Solver(Abstract_Solver):
     _scaling = 1.0
     _alpha = 1
 
-    samples = []
-
-    timer = 0
+    # samples = []
+    # timer = 0
 
     def _sharing(self):
         def decorator(func):
@@ -30,12 +31,12 @@ class GA_Solver(Abstract_Solver):
                 # calculate sharing factor for each individual
                 individuals = list(map(reorder, args[0]))
 
-                # take intermediate result as samples
-                self.timer += 1
-                if self.timer == 10:
-                    # idx = np.random.choice(len(args[0]), 10, replace=False)
-                    self.samples.extend(args[0][:10])
-                    self.timer = 0
+                # # take intermediate result as samples
+                # self.timer += 1
+                # if self.timer == 10:
+                #     # idx = np.random.choice(len(args[0]), 10, replace=False)
+                #     self.samples.extend(args[0][:10])
+                #     self.timer = 0
 
                 pd = squareform(pdist(individuals)) / self._scaling
 
@@ -64,10 +65,10 @@ class GA_Solver(Abstract_Solver):
         if not hasattr(creator, 'Individual'):
             creator.create('Individual', np.ndarray, typecode='i', fitness=creator.FitnessMin)
 
-    def solve(self, inst: Abstract_Prob, eval=None, niching=None):
+    def solve(self, inst: Abstract_Prob, eval=None, niching=None, seed=None):
         # initialise samples for each solve
-        self.samples = []
-        self.timer = 0
+        # self.samples = []
+        # self.timer = 0
 
         toolbox = base.Toolbox()
 
@@ -80,6 +81,8 @@ class GA_Solver(Abstract_Solver):
 
         toolbox.register('mutate', tools.mutShuffleIndexes, indpb=0.05)
         toolbox.register('select', tools.selTournament, tournsize=3)
+        # toolbox.register('select', tools.selBest)
+
         if eval is None:
             toolbox.register('mate', tools.cxPartialyMatched)
             toolbox.register('evaluate', inst.eval)
@@ -98,24 +101,36 @@ class GA_Solver(Abstract_Solver):
             # deterministic crowding
             pass
 
-        pop = toolbox.population(n=self._pop_size)
+        population = toolbox.population(n=self._pop_size)
 
-        # hof = tools.HallOfFame(1)
-        # stats = tools.Statistics(lambda ind: ind.fitness.values)
-        # stats.register('avg', np.mean)
-        # stats.register('std', np.std)
-        # stats.register('min', np.min)
-        # stats.register('max', np.max)
+        if seed is not None:
+            if not isinstance(seed, Iterable):
+                seed = [seed]
+            for seed_i in seed:
+                population.pop()
+                seed_ind = creator.Individual(seed_i)
+                population.insert(0, seed_ind)
 
-        algorithms.eaSimple(pop, toolbox, 0.7, 0.2, self._max_iter, verbose=False)
+        hof = tools.HallOfFame(1, similar=np.allclose)
+        stats = tools.Statistics(lambda ind: ind.fitness.values)
+        stats.register('avg', np.mean)
+        stats.register('std', np.std)
+        stats.register('min', np.min)
+        stats.register('max', np.max)
 
-        return pop
+        population, logbook = algorithms.eaSimple(population, toolbox, 0.7, 0.2, self._max_iter, verbose=False, stats=stats, halloffame=hof)
+        # population, logbook = algorithms.eaSimple(population, toolbox, 0.7, 0.2, self._max_iter, verbose=False)
+
+        tour = np.array(hof[0])
+
+        if eval is None:
+            return {'tour': tour, 'fitness': inst.eval(tour)[0], 'pop': population, 'iter_avg': [iter['avg'] for iter in logbook]}
+        else:
+            return {'tour': tour, 'fitness': eval(tour)[0], 'pop': population, 'iter_avg': [iter['avg'] for iter in logbook]}
 
 
 if __name__ == '__main__':
     tsp = TSP(50)
     slr = GA_Solver()
-    pop = slr.solve(tsp, niching='fs')
-    print(min(map(lambda x: x.fitness.values[0], pop)))
-    pop = slr.solve(tsp)
-    print(min(map(lambda x: x.fitness.values[0], pop)))
+    res = slr.solve(tsp)
+    print(list(res['iter_avg']))
